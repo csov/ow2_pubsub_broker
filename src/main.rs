@@ -1,3 +1,4 @@
+mod pubsub;
 use actix_web::{middleware::Logger, App, HttpServer};
 
 #[actix_web::main]
