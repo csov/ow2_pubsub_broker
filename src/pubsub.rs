@@ -5,9 +5,8 @@ use std::{
 };
 
 use actix::prelude::*;
-use rand::Rng;
 
-#[derive(Message, Eq, Hash, PartialEq, Clone)]
+#[derive(Message, Eq, Hash, PartialEq, Clone, Debug)]
 #[rtype(result = "()")]
 pub struct ChatID(pub String);
 
@@ -17,33 +16,34 @@ pub struct Trigger;
 
 #[derive(Message)]
 #[rtype(result = "()")]
-pub struct AddRecipient {
-    chat_id: ChatID,
+pub struct AddSub {
+    pub chat_id: ChatID,
     pub addr: Recipient<ChatID>,
 }
 
 #[derive(Message)]
 #[rtype(result = "()")]
-pub struct DelRecipient {
-    chat_ids: Vec<ChatID>,
+pub struct Disconnect {
+    pub chat_ids: HashSet<ChatID>,
     pub addr: Recipient<ChatID>,
 }
 
 pub struct Broker {
-    // TODO: research why examples use HashMap<usize, Recipient<Message>>
-    // The reason might be that a recipient does not produce a unique hash.
-    // If this is the case, a unique ID must be passed back to the session actor.
     sessions: HashMap<ChatID, HashSet<Recipient<ChatID>>>,
+    test_counter: u8,
 }
 
 impl Broker {
     pub fn new() -> Self {
-        Broker { sessions: HashMap::new() }
+        Broker { sessions: HashMap::new(), test_counter: 0 }
     }
 
     fn send_id(&mut self) {
-        let mut rng = rand::thread_rng();
-        let chat_id = ChatID((rng.gen::<u8>() % 10).to_string());
+        self.test_counter += 1;
+        if self.test_counter == 10 {
+            self.test_counter = 0
+        }
+        let chat_id = ChatID((self.test_counter % 10).to_string());
         if let Some(recipients) = self.sessions.get(&chat_id) {
             for r in recipients.iter() {
                 r.do_send(chat_id.clone());
@@ -75,14 +75,10 @@ impl Handler<Trigger> for Broker {
     }
 }
 
-impl Handler<AddRecipient> for Broker {
+impl Handler<AddSub> for Broker {
     type Result = ();
 
-    fn handle(
-        &mut self,
-        msg: AddRecipient,
-        _: &mut Self::Context,
-    ) -> Self::Result {
+    fn handle(&mut self, msg: AddSub, _: &mut Self::Context) -> Self::Result {
         self.sessions
             .entry(msg.chat_id)
             .and_modify(|recipients| {
@@ -92,14 +88,10 @@ impl Handler<AddRecipient> for Broker {
     }
 }
 
-impl Handler<DelRecipient> for Broker {
+impl Handler<Disconnect> for Broker {
     type Result = ();
 
-    fn handle(
-        &mut self,
-        msg: DelRecipient,
-        _: &mut Self::Context,
-    ) -> Self::Result {
+    fn handle(&mut self, msg: Disconnect, _: &mut Self::Context) -> Self::Result {
         for chat_id in msg.chat_ids {
             self.sessions.entry(chat_id).and_modify(|recipients| {
                 recipients.remove(&msg.addr);
