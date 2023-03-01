@@ -7,13 +7,18 @@ use actix::prelude::*;
 use actix_web_actors::ws;
 use uuid::Uuid;
 
-use crate::pubsub::{AddSub, Broker, ChatID, Disconnect};
+use crate::{
+    broker::Broker,
+    message::{AddSub, ChatID, Disconnect},
+};
+
+// TODO: Auth cookie
 
 /// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(25);
 
 /// How long before lack of client response causes a timeout
-const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
+const CLIENT_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[derive(Debug)]
 pub struct WsChatSession {
@@ -91,7 +96,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsChatSession {
                     });
                 }
             }
-            ws::Message::Binary(_) => {},
+            ws::Message::Binary(_) => {}
             ws::Message::Close(reason) => {
                 ctx.close(reason);
                 ctx.stop();
