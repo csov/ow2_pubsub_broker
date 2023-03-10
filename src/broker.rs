@@ -20,8 +20,8 @@ lazy_static::lazy_static! {
     static ref TOPIC: String = var("OW2_TOPIC").expect("OW2_TOPIC must be set");
     // Subscription name must start with a character
     static ref SUBSCRIPTION: String = format!("a{}", uuid::Uuid::new_v4());
-
 }
+const EXIT_CODE: i32 = 0x0100;
 
 pub struct Broker {
     sessions: HashMap<ChatID, HashSet<Recipient<ChatID>>>,
@@ -43,7 +43,7 @@ impl Actor for Broker {
         actix::spawn(async move {
             if let Err(e) = connect_to_gcp(addr).await {
                 log::error!("Error connecting to GCP PUB/SUB: {:?}", e);
-                process::exit(0x0100);
+                process::exit(EXIT_CODE);
             }
         });
     }
@@ -71,7 +71,7 @@ async fn connect_to_gcp(addr: Addr<Broker>) -> Result<(), Box<dyn error::Error>>
             }
             Err(e) => {
                 log::error!("Error parsing message: {:?}", e);
-                return Err(Box::new(e));
+                return Err(e.into());
             }
         }
     }
