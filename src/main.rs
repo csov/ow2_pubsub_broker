@@ -33,6 +33,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(web::Data::new(broker.clone()))
             .route("/broker/ws", web::get().to(broker_connection))
+            .route("/broker/healthz", web::get().to(|| HttpResponse::Ok()))
             .wrap(Logger::default())
     })
     .bind(("0.0.0.0", 8080))?
